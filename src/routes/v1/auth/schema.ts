@@ -47,6 +47,17 @@ export const ErrorResponseSchema = v.object({
   error: v.string(),
 });
 
+export const CheckUsernameQuerySchema = v.object({
+  username: v.pipe(
+    v.string("username query param is required"),
+    v.minLength(1, "username cannot be empty"),
+  ),
+});
+export const CheckUsernameResponseSchema = v.object({
+  available: v.boolean(),
+  message: v.optional(v.string()),
+});
+
 export const loginDocs = describeRoute({
   tags: ["Auth"],
   summary: "Login with email and password",
@@ -174,6 +185,26 @@ export const logoutDocs = describeRoute({
       description: "Logged out successfully",
       content: {
         "application/json": { schema: resolver(MessageResponseSchema) },
+      },
+    },
+  },
+});
+
+export const checkUsernameDocs = describeRoute({
+  tags: ["Auth"],
+  summary: "Check username availability",
+  description: "Returns whether a username is available. Case-insensitive.",
+  responses: {
+    200: {
+      description: "Availability check result",
+      content: {
+        "application/json": { schema: resolver(CheckUsernameResponseSchema) },
+      },
+    },
+    400: {
+      description: "Missing or invalid username parameter",
+      content: {
+        "application/json": { schema: resolver(ErrorResponseSchema) },
       },
     },
   },

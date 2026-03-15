@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ilike } from "drizzle-orm";
 import { generateAccessToken, generateOpaqueToken, hashToken, isLegacyPassword } from "$src/lib/jwt";
 import type { AppContext } from "$src/types";
 import { validator } from "hono-openapi";
@@ -29,6 +29,8 @@ import {
   logoutDocs,
   ActivateAccountSchema,
   activateDocs,
+  CheckUsernameQuerySchema,
+  checkUsernameDocs
 } from "./schema";
 
 const AUTH_PROVIDERS = {
@@ -410,4 +412,23 @@ auth.post("/logout", logoutDocs, validator("json", RefreshTokenSchema), async (c
 
   return c.json({ message: "Logged out successfully" });
 });
+
+auth.get(
+  "/check-username",
+  checkUsernameDocs,
+  validator("query", CheckUsernameQuerySchema),
+  async (c) => {
+    const db = c.get("db");
+    const { username } = c.req.valid("query");
+    const [existing] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(ilike(users.username, username))
+      .limit(1);
+    if (existing) {
+      return c.json({ available: false, message: "Username is already taken" });
+    }
+    return c.json({ available: true });
+  },
+);
 export default auth;
