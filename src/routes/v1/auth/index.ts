@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, ilike } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { generateAccessToken, generateOpaqueToken, hashToken, isLegacyPassword } from "$src/lib/jwt";
 import type { AppContext } from "$src/types";
 import { validator } from "hono-openapi";
@@ -420,10 +420,12 @@ auth.get(
   async (c) => {
     const db = c.get("db");
     const { username } = c.req.valid("query");
+    // lower() on both sides = true case-insensitive equality.
+    // Using ilike() would allow SQL wildcards (%, _) in user input, which is a bug.
     const [existing] = await db
       .select({ id: users.id })
       .from(users)
-      .where(ilike(users.username, username))
+      .where(eq(sql`lower(${users.username})`, username.toLowerCase()))
       .limit(1);
     if (existing) {
       return c.json({ available: false, message: "Username is already taken" });

@@ -1,6 +1,15 @@
 import * as v from "valibot";
 import { describeRoute, resolver } from "hono-openapi";
 
+// Shared username validation rules.
+// Used by both RegisterSchema and CheckUsernameQuerySchema so they always agree
+// on what constitutes a valid username — changing rules here updates both.
+export const UsernameSchema = v.pipe(
+  v.string("Username is required"),
+  v.minLength(3, "Username must be at least 3 characters"),
+  v.maxLength(30, "Username cannot exceed 30 characters"),
+);
+
 export const LoginSchema = v.object({
   email: v.pipe(v.string("Email is required"), v.email("Invalid email format")),
   password: v.string("Password is required"),
@@ -8,11 +17,7 @@ export const LoginSchema = v.object({
 
 export const RegisterSchema = v.object({
   email: v.pipe(v.string(), v.email(), v.maxLength(255, "Email cannot exceed 255 characters")),
-  username: v.pipe(
-    v.string(),
-    v.minLength(3, "Username must be at least 3 characters"),
-    v.maxLength(30, "Username cannot exceed 30 characters"),
-  ),
+  username: UsernameSchema,
   password: v.pipe(
     v.string("Password is required"),
     v.minLength(8, "Password must be at least 8 characters"),
@@ -48,10 +53,9 @@ export const ErrorResponseSchema = v.object({
 });
 
 export const CheckUsernameQuerySchema = v.object({
-  username: v.pipe(
-    v.string("username query param is required"),
-    v.minLength(1, "username cannot be empty"),
-  ),
+  // Reuse the exact same rules as RegisterSchema so the availability check
+  // reflects what can actually be registered (3-30 chars).
+  username: UsernameSchema,
 });
 export const CheckUsernameResponseSchema = v.object({
   available: v.boolean(),
